@@ -1,0 +1,9 @@
+.idea
+.vscode
+
+.directory
+.DS_Store
+desktop.ini
+
+*.py[cod]
+*.db

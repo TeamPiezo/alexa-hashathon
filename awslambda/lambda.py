@@ -1,16 +1,11 @@
 """
-This sample demonstrates a simple skill built with the Amazon Alexa Skills Kit.
-The Intent Schema, Custom Slots, and Sample Utterances for this skill, as well
-as testing instructions are located at http://amzn.to/1LzFrj6
+Source for Lambda service
 
-For additional samples, visit the Alexa Skills Kit Getting Started guide at
-http://amzn.to/1LGWsLG
+Copy-paste this code in the console OR upload it to the specified S3 location
 """
 
-from __future__ import print_function
 
-
-# --------------- Helpers that build all of the responses ----------------------
+# Response builders
 
 def build_speechlet_response(title, output, reprompt_text, should_end_session):
     return {
@@ -41,10 +36,11 @@ def build_response(session_attributes, speechlet_response):
     }
 
 
-# --------------- Functions that control the skill's behavior ------------------
+# Handle intents of skills
 
 def get_welcome_response():
-    """ If we wanted to initialize the session to have some attributes we could
+    """
+    If we wanted to initialize the session to have some attributes we could
     add those here
     """
 
@@ -88,7 +84,9 @@ def book_session(intent, session):
     speech_output = "My developers haven't told me how to do that."
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
-# --------------- Events ------------------
+
+
+# Handle events
 
 def on_session_started(session_started_request, session):
     """ Called when the session starts """
@@ -98,9 +96,7 @@ def on_session_started(session_started_request, session):
 
 
 def on_launch(launch_request, session):
-    """ Called when the user launches the skill without specifying what they
-    want
-    """
+    """ Called when the user launches the skill without specifying what they want """
 
     print("on_launch requestId=" + launch_request['requestId'] +
           ", sessionId=" + session['sessionId'])
@@ -131,7 +127,8 @@ def on_intent(intent_request, session):
 
 
 def on_session_ended(session_ended_request, session):
-    """ Called when the user ends the session.
+    """
+    Called when the user ends the session.
 
     Is not called when the skill returns should_end_session=true
     """
@@ -140,7 +137,7 @@ def on_session_ended(session_ended_request, session):
     # add cleanup logic here
 
 
-# --------------- Main handler ------------------
+# Entrypoint for Lambda service
 
 def lambda_handler(event, context):
     """ Route the incoming request based on type (LaunchRequest, IntentRequest,

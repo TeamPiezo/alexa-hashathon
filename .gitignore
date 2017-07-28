@@ -1,6 +1,6 @@
 .idea
 .vscode
-
+**/venv
 .directory
 .DS_Store
 desktop.ini

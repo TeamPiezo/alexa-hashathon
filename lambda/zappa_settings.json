@@ -1,0 +1,13 @@
+{
+    "dev": {
+        "s3_bucket": "piezo-alexa-hash",
+
+        // The modular python path to your WSGI application function.
+        // In Flask and Bottle, this is your 'app' object.
+        // Flask (your_module.py):
+        // app = Flask()
+        // Bottle (your_module.py):
+        // app = bottle.default_app()
+        "app_function": "server.app"
+    }
+}

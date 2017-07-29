@@ -1,6 +1,10 @@
 import slackclient
+import config
 
-slack = slackclient.SlackClient()
+slack = slackclient.SlackClient(config.TOKEN)
 
-def get_users_from_slack():
-    pass
+
+def post_message(message, person='default', channel = config.TARGET_CHANNEL):
+    slack.api_call('chat.postMessage',
+                   channel=channel,
+                   text='Assigned to ' + person + ':\n' + message)

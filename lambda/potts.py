@@ -1,7 +1,11 @@
 from flask import Flask, render_template
 from flask_ask import Ask, session, statement, question
+from slack import post_message
+from helper import get_time_strings
 import requests
 import json
+import config
+from datetime import datetime
 
 app = Flask(__name__)
 ask = Ask(app, '/')
@@ -26,26 +30,40 @@ def handle_find_slot(date=None):
         session.attributes['stage'] = 'book_slot'
         return question('You didn\'t specify the date. What date you would like to book?')
     else:
-        # Make request to api to book
+        print(date)
+        params = {
+            'date': date
+        }
+        req = requests.get(config.API + '/find_slot', params=params)
+        print(req.text)
+        freeslots_string = get_time_strings(json.loads(req.text)['freesloats'])
         session.attributes['stage'] = 'find_slot'
         session.attributes['date'] = date
-        return question('These are free slots for ' + date + ' Which one do you want me to book?')
+        return question('The free slots for ' + date + ' are '+ freeslots_string + ' Which one do you want me to book?')
 
 
 @ask.intent('BookSlot')
-def handle_book_slot(slot_time=None):
+def handle_book_slot(time=None, name='default'):
     """
     If time is provided, book for that time. Else ask the user to try again.
     :param slot_time:
     :return:
     """
     # Make request here
-    if not slot_time:
+
+    if not time:
         return question('You didn\'t specify the time. Try again.')
     else:
-        # Make request to API
+        slot_date = session.attributes.get('date', None)
+        params = {
+            'starttime': time,
+            'bookedbyuser': name,
+            'date': slot_date
+        }
+        print(params)
         session.attributes['stage'] = 'book_slot'
-        return question('I have booked this room for ' + slot_time + '. Are you sure?')
+        session.attributes['slot_params'] = params
+        return question('You want to book at ' + time + ' Is that correct?')
 
 
 @ask.intent('StartMeeting')
@@ -54,11 +72,8 @@ def handle_start_meeting():
 
     :return:
     """
-    # Send request to API to begin session and get current user
-    meeting_data = {
-        "user": "placeholder user"
-    }
-    return statement('Meeting has been started for ' + meeting_data['user'])
+    req = requests.get(config.API + '/start_meeting')
+    return statement('Meeting has been started for')
 
 
 @ask.intent('EndMeeting')
@@ -68,17 +83,28 @@ def handle_end_meeting():
     :return:
     """
     # Get meeting details
+    req = requests.get(config.API + '/meeting/end')
     reply = 'The meeting has been marked ended.'
     return statement(reply)
 
 
-@ask.intent('CancelSlot')
-def handle_cancel_slot():
+@ask.intent('CancelSlot', mapping={'slot_date': 'date', 'slot_time': 'time'})
+def handle_cancel_slot(slot_date, slot_time):
     """
 
     :return:
     """
-    return statement('')
+    params = {
+        'slot_date': slot_date,
+        'slot_time': slot_time
+    }
+    req = requests.get(config.API + '/cancel_slot', params=params)
+    status = json.loads(req.text)['status']
+    if status == 'success':
+        return statement('The task at ' + slot_date + ' ' + slot_time + ' has been cancelled.')
+    elif status == 'not_exist':
+        return statement('There is no task at this time.')
+    return question('Error. Try again.')
 
 
 @ask.intent('UndoTask')
@@ -88,15 +114,18 @@ def handle_undo_task():
     :return:
     """
     # Send call to API for deleting (or whatever marking) the last added-task
+    req = requests.get(config.API + '/undo_task')
+    return statement('Your last added task has been deleted')
 
 
 @ask.intent('AssignTask')
-def handle_assign_task(task, person):
+def handle_assign_task(task, userp=''):
     """
 
     :return:
     """
-    reply = 'Task has been assigned to ' + person
+    post_message(task, userp)
+    reply = 'Task has been assigned to ' + userp
     return statement(reply)
 
 
@@ -113,7 +142,11 @@ def get_date(date):
 def confirm_request():
     stage = session.attributes['stage']
     if stage == 'book_slot':
-        return statement('OK. Booked.')
+        params = session.attributes['slot_params']
+        req = requests.get(config.API + '/book_slot', params=params)
+        if json.loads(req.text)['status'] == 'success':
+            return statement('OK. Booked.')
+        return question('Slot already used. You may try again.')
     elif stage == '':
         return statement('Bye.')
     else:
@@ -124,7 +157,7 @@ def confirm_request():
 def confirm_request():
     stage = session.attributes['stage']
     if stage == 'finding_slot':
-        return statement('OK. If you don\'nt want to book, bye!')
+        return statement('OK. Bye!')
     elif stage == '':
         return statement('Bye.')
     else:

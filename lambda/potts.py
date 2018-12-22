@@ -39,18 +39,19 @@ def handle_find_slot(date=None):
         freeslots_string = get_time_strings(json.loads(req.text)['freesloats'])
         session.attributes['stage'] = 'find_slot'
         session.attributes['date'] = date
-        return question('The free slots for ' + date + ' are '+ freeslots_string + ' Which one do you want me to book?')
+        return question(
+            'The free slots for ' + date + ' are ' + freeslots_string + ' Which one do you want me to book?')
 
 
 @ask.intent('BookSlot')
 def handle_book_slot(time=None, name='default'):
     """
     If time is provided, book for that time. Else ask the user to try again.
-    :param slot_time:
+    :param time:
     :return:
     """
     # Make request here
-
+    print('in book slot')
     if not time:
         return question('You didn\'t specify the time. Try again.')
     else:
@@ -73,7 +74,13 @@ def handle_start_meeting():
     :return:
     """
     req = requests.get(config.API + '/start_meeting')
-    return statement('Meeting has been started for')
+    status = json.loads(req.text)['status']
+
+    if status == 'success':
+        return statement('Scheduled meeting has been started.')
+    elif status == 'not_exist':
+        return question('There is not meeting scheduled at this time. You may try to book one now.')
+    return statement('Please try again.')
 
 
 @ask.intent('EndMeeting')
@@ -82,10 +89,14 @@ def handle_end_meeting():
 
     :return:
     """
-    # Get meeting details
-    req = requests.get(config.API + '/meeting/end')
-    reply = 'The meeting has been marked ended.'
-    return statement(reply)
+    req = requests.get(config.API + '/end_meeting')
+    status = json.loads(req.text)['status']
+
+    if status == 'success':
+        return statement('Meeting has been ended. Have a nice day.')
+    elif status == 'not_exist':
+        return question('There is no meeting going on at this time.')
+    return statement('Please try again.')
 
 
 @ask.intent('CancelSlot', mapping={'slot_date': 'date', 'slot_time': 'time'})
@@ -98,13 +109,9 @@ def handle_cancel_slot(slot_date, slot_time):
         'slot_date': slot_date,
         'slot_time': slot_time
     }
-    req = requests.get(config.API + '/cancel_slot', params=params)
-    status = json.loads(req.text)['status']
-    if status == 'success':
-        return statement('The task at ' + slot_date + ' ' + slot_time + ' has been cancelled.')
-    elif status == 'not_exist':
-        return statement('There is no task at this time.')
-    return question('Error. Try again.')
+    session.attributes['stage'] = 'cancel_slot'
+    session.attributes['params'] = params
+    return question('You want me to delete slot at ' + slot_date + ' ' + slot_time + ' . Is that correct?')
 
 
 @ask.intent('UndoTask')
@@ -147,8 +154,17 @@ def confirm_request():
         if json.loads(req.text)['status'] == 'success':
             return statement('OK. Booked.')
         return question('Slot already used. You may try again.')
-    elif stage == '':
-        return statement('Bye.')
+
+    elif stage == 'cancel_slot':
+        params = session.attributes['params']
+        req = requests.get(config.API + '/cancel_slot', params=params)
+        status = json.loads(req.text)['status']
+        if status == 'success':
+            return statement('The task at ' + params['slot_date'] + ' ' + params['slot_time'] + ' has been cancelled.')
+        elif status == 'not_exist':
+            return statement('There is no task at this time.')
+        return statement('Error. Try again.')
+
     else:
         return statement('Bye.')
 
@@ -173,6 +189,7 @@ def terminate():
 def launched():
     welcome_msg = 'Welcome to Potts, your own office assistant. Just like Tony Stark.'
     return question(welcome_msg)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

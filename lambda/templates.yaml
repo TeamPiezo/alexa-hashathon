@@ -1,3 +1,13 @@
 welcome: Welcome to Potts, your own office assistant. Just like Tony Stark.
 
 hello: Whoa
+
+trigger: Ask Potts
+find: What free slots are available today
+book: Book a slot at 7 pm for Alex
+
+cancel: Cancel slot at 7 pm today
+
+start_meeting: start meeting
+end_meeting: end meeting
+assign: add task development to Alex
